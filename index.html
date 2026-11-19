@@ -1,1 +1,159 @@
-# portail-lecture-numerique
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>بوابة المطالعة الرقمية</title>
+    <link href="https://googleapis.com" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    <script src="https://unpkg.com"></script>
+    <script src="https://cloudflare.com"></script>
+</head>
+<body>
+
+<header class="hero-header">
+    <div class="top-bar">
+        <div class="brand-badge">📖 فضاء المطالعة والكتاب</div>
+        <div class="nav-actions">
+            <button id="settingsBtn" class="icon-btn" title="إعدادات المؤسسة">⚙️</button>
+            <button id="darkModeBtn" class="icon-btn" title="الوضع الليلي">🌙</button>
+            <button id="cardBtn" class="icon-btn" title="بطاقة معطيات المنخرط">🪪</button>
+            <button id="scanBtn" class="btn-scan">📷 سكان</button>
+        </div>
+    </div>
+
+    <div class="institution-box">
+        <span class="sub-welcome">مرحباً بكم في</span>
+        <div class="inst-title-row">
+            <h1 id="institutionName">اسم المكتبة أو المؤسسة</h1>
+            <button id="editInstBtn" class="edit-inst-btn" title="تعديل الاسم">✏️</button>
+        </div>
+        <p class="reading-quote">✨ "خير جليس في الأنام كتاب" • استعر كتابك أو طالعه عن بُعد ✨</p>
+    </div>
+</header>
+
+<main class="container">
+    <div class="stats-grid">
+        <div class="stat-card c1"><span id="statTotal">0</span><small>إجمالي الكتب</small></div>
+        <div class="stat-card c2"><span id="statAvail">0</span><small>متاح للإعارة</small></div>
+        <div class="stat-card c3"><span id="statDigital">0</span><small>قراءة عن بُعد</small></div>
+        <div class="stat-card c4"><span id="statFav">0</span><small>مفضلتي ❤️</small></div>
+    </div>
+
+    <div class="controls-box">
+        <input type="text" id="searchInput" placeholder="🔍 ابحث عن كتاب، مؤلف، رقم محلي، أو رف...">
+        <div class="tabs">
+            <button class="tab-btn active" data-filter="all">الكل 📚</button>
+            <button class="tab-btn" data-filter="available">متوفر ✅</button>
+            <button class="tab-btn" data-filter="digital">مطالعة عن بُعد 📖</button>
+            <button class="tab-btn" data-filter="ar">عربي 🇹🇳</button>
+            <button class="tab-btn" data-filter="fr">Français 🇫🇷</button>
+            <button class="tab-btn" data-filter="fav">مفضلتي ❤️</button>
+        </div>
+    </div>
+
+    <div id="booksContainer" class="books-grid"></div>
+</main>
+
+<footer class="footer">
+    📚 فضاء المطالعة الرقمي • صُمّم لتشجيع القراءة ونشر المعرفة
+</footer>
+
+<!-- 1. نافذة إعدادات المؤسسة -->
+<div id="settingsModal" class="modal hidden">
+    <div class="modal-box">
+        <div class="modal-head">
+            <h3>⚙️ إعدادات المكتبة / المؤسسة</h3>
+            <button class="close-modal" onclick="closeModal('settingsModal')">✖</button>
+        </div>
+        <form id="settingsForm">
+            <label class="input-label">اسم المكتبة أو المؤسسة:</label>
+            <input type="text" id="setInstName" placeholder="اكتب اسم المكتبة هنا..." required>
+            <label class="input-label">رقم هاتف الواتساب لاستقبال الإعارات:</label>
+            <input type="tel" id="setPhone" placeholder="مثال: 216XXXXXXXX">
+            <label class="input-label">معرّف جدول Google Sheets (اختياري حالياً):</label>
+            <input type="text" id="setSheetId" placeholder="اتركه فارغاً لعرض الكتب التجريبية">
+            <button type="submit" class="btn-full primary">حفظ وتطبيق ✅</button>
+        </form>
+    </div>
+</div>
+
+<!-- 2. نافذة قارئ الصفحات التفاعلي -->
+<div id="readerModal" class="modal hidden">
+    <div class="modal-box reader-box">
+        <div class="modal-head">
+            <h3 id="readerTitle">📖 مطالعة الكتاب</h3>
+            <button class="close-modal" onclick="closeModal('readerModal')">✖</button>
+        </div>
+        <div class="page-viewer">
+            <canvas id="pdfCanvas"></canvas>
+            <div id="demoPageContent" class="demo-page hidden"></div>
+        </div>
+        <div class="page-controls">
+            <button id="prevPageBtn" class="page-btn">➡️ الصفحة السابقة</button>
+            <span id="pageIndicator" class="page-num">صفحة 1 من 1</span>
+            <button id="nextPageBtn" class="page-btn">الصفحة التالية ⬅️</button>
+        </div>
+    </div>
+</div>
+
+<!-- 3. نافذة الإعارة عن بُعد (مُضاف إليها العمر) -->
+<div id="borrowModal" class="modal hidden">
+    <div class="modal-box">
+        <div class="modal-head">
+            <h3>📦 طلب إعارة كتاب عن بُعد</h3>
+            <button class="close-modal" onclick="closeModal('borrowModal')">✖</button>
+        </div>
+        <div id="borrowBookInfo" class="highlight-box"></div>
+        <form id="borrowForm">
+            <input type="text" id="bName" placeholder="الاسم واللقب الكامل" required>
+            <input type="number" id="bAge" placeholder="العمر (مثال: 18)" min="5" max="100" required>
+            <input type="text" id="bCardId" placeholder="رقم الاشتراك" required>
+            <input type="tel" id="bPhone" placeholder="رقم الهاتف" required>
+            <select id="bDuration">
+                <option value="7 أيام">مدة الإعارة: أسبوع (7 أيام)</option>
+                <option value="15 يوماً" selected>مدة الإعارة: أسبوعين (15 يوماً)</option>
+            </select>
+            <button type="submit" class="btn-full success">تأكيد وإرسال طلب الإعارة ✅</button>
+        </form>
+    </div>
+</div>
+
+<!-- 4. نافذة بطاقة المعطيات والانخراط (الاسم، رقم الاشتراك، وعناوين الكتب) -->
+<div id="memberModal" class="modal hidden">
+    <div class="modal-box">
+        <div class="modal-head">
+            <h3>🪪 بطاقة معطيات المنخرط والإعارة</h3>
+            <button class="close-modal" onclick="closeModal('memberModal')">✖</button>
+        </div>
+        <form id="memberForm">
+            <label class="input-label">الاسم واللقب:</label>
+            <input type="text" id="mName" placeholder="أدخل الاسم واللقب" required>
+            
+            <label class="input-label">رقم الاشتراك:</label>
+            <input type="text" id="mSubId" placeholder="أدخل رقم الاشتراك في المكتبة" required>
+            
+            <label class="input-label">عناوين الكتب المراد إعارتها:</label>
+            <textarea id="mBooks" rows="3" placeholder="تُضاف هنا أوتوماتيكياً الكتب التي طلبت إعارتها أو اخترتها في المفضلة، ويمكنك كتابتها يدوياً..." required></textarea>
+            
+            <button type="submit" class="btn-full primary">إنشاء بطاقة المعطيات ✅</button>
+        </form>
+        <div id="digitalCardPreview" class="digital-card hidden"></div>
+    </div>
+</div>
+
+<!-- 5. نافذة سكان الباركود -->
+<div id="scannerModal" class="modal hidden">
+    <div class="modal-box">
+        <div class="modal-head">
+            <h3>📷 مسح باركود الكتاب</h3>
+            <button class="close-modal" id="closeScanBtn">✖</button>
+        </div>
+        <div id="qrReader"></div>
+    </div>
+</div>
+
+<script src="script.js"></script>
+</body>
+</html>
+
